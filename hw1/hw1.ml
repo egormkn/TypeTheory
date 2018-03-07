@@ -1,10 +1,22 @@
-type peano = Z | S of peano;; (* Типы необходимо копировать в реализацию *)
-type lambda = Var of string | Abs of string * lambda | App of lambda * lambda;;
+(* OCaml implementation of Peano arithmetics and lambda expressions *)
 
-let peano_of_int x = failwith "Not implemented";;
+(* Define types used in *.mli interface *)
+type peano = 
+        | Z 
+		| S of peano;;
+		
+type lambda = 
+        | Var of string 
+		| Abs of string * lambda 
+		| App of lambda * lambda;;
+
+(* Basic peano <-> string conversion *)
+let rec peano_of_int x = match x with
+    | 0 -> Z
+	| x -> S (peano_of_int (x - 1));;
 
 let rec int_of_peano p = match p with
-    Z -> 0
+  | Z -> 0
   | S x -> 1 + int_of_peano x;;
 
 let inc x = failwith "Not implemented";;
