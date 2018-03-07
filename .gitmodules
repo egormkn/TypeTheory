@@ -1,0 +1,3 @@
+[submodule "ocaml-makefile"]
+	path = ocaml-makefile
+	url = https://github.com/mmottl/ocaml-makefile.git
