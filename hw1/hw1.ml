@@ -97,7 +97,7 @@ let rec string_of_lambda x =
   | App (x, Var y) -> string_of_lambda x ^ " " ^ y
   | App (x, y) -> string_of_lambda x ^ " (" ^ string_of_lambda y ^ ")";;
 
-(* 
+(*
  * Lambda parser grammar:
  * <lambda> -> <expr> ' ' <abs> | <expr> | <abs>
  * <abs> -> \<var>.<lambda>
@@ -115,7 +115,7 @@ let lambda_of_string input =
     match (next()) with
     | Genlex.Kwd "("  -> parse_parentheses()
     | Genlex.Kwd "\\" -> parse_abs()
-    | Genlex.Ident s  -> parse_var s
+    | Genlex.Ident v  -> parse_var v
     | _ -> failwith "Unexpected symbol"
 
   and parse_parentheses() =
@@ -125,25 +125,25 @@ let lambda_of_string input =
 
   and parse_abs() =
     match (next()) with
-    | Genlex.Ident s ->
+    | Genlex.Ident v ->
       check_fullstop();
       let lambda = parse_lambda() in
-      check_app (Abs (s, lambda));
+      check_app (Abs (v, lambda));
     | _ -> failwith "Unexpected symbol"
 
-  and parse_var s =
-    check_app (Var s);
+  and parse_var v =
+    check_app (Var v);
 
   and parse_app lambda next_token = match next_token with
     | Genlex.Kwd ")"  -> lambda
     | Genlex.Kwd ";"  -> lambda
     | Genlex.Kwd "\\" -> App(lambda, parse_lambda())
-    | Genlex.Kwd "("  -> let _ = next() and arg = parse_lambda() in (check_parenthesis(); check_app (App (lambda, arg)))
-    | Genlex.Ident s  -> let _ = next() in check_app (App (lambda, Var s))
+    | Genlex.Kwd "("  -> let () = next() and arg = parse_lambda() in (check_parenthesis(); check_app (App (lambda, arg)))
+    | Genlex.Ident v  -> let () = next() in check_app (App (lambda, Var v))
     | _ -> failwith "Unexpected symbol"
 
   and check_app lambda =
     match (peek()) with
-    | None   -> failwith "Unexpected end of string"
-    | Some k -> parse_app lambda k
+    | None       -> failwith "Unexpected end of string"
+    | Some token -> parse_app lambda token
   in parse_lambda();;
