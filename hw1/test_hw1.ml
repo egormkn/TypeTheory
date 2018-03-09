@@ -66,3 +66,6 @@ test "string_of_lambda" "z (\\x.\\y.x y)" (string_of_lambda (lambda_of_string "(
 test "string_of_lambda" "\\x.\\y.x f (y f)" (string_of_lambda (lambda_of_string "\\x.\\y.(x f) (y f)"));;
 test "string_of_lambda" "x1" (string_of_lambda (lambda_of_string "x1"));;
 test "string_of_lambda" "(\\x.x) (\\x.x) x" (string_of_lambda (lambda_of_string "(\\x.x) (\\x.x) x"));;
+test "string_of_lambda" "(\\z.z (y z)) (z x) z" (string_of_lambda (lambda_of_string "((\\z.(z(y z)))(z x)z)"));;
+test "string_of_lambda (Y)" "\\f.(\\x.f (x x)) (\\x.f (x x))" (string_of_lambda (lambda_of_string "\\f.(\\x.f(x x))(\\x.f(x x))"));;
+test "string_of_lambda (-1)" "\\n.(\\p.p (\\x.\\y.x)) (n (\\p.\\f.f ((\\p.p (\\x.\\y.y)) p) ((\\n.\\f.\\x.f (n f x)) ((\\p.p (\\x.\\y.y)) p))) (\\f.f (\\f.\\x.x) (\\f.\\x.x)))" (string_of_lambda (lambda_of_string "\\n.(\\p.p (\\x.\\y.x)) (n (\\p.\\f.f ((\\p.p (\\x.\\y.y)) p) ((\\n.\\f.\\x.f (n f x)) ((\\p.p (\\x.\\y.y)) p))) (\\f.f (\\f.\\x.x) (\\f.\\x.x)))"));;
