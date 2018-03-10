@@ -112,7 +112,7 @@ let lambda_of_string input =
   let check_fullstop() = if (next() <> Genlex.Kwd ".") then failwith "No full stop symbol found" in
 
   let rec parse_lambda() =
-    match (next()) with
+    match next() with
     | Genlex.Kwd "("  -> parse_parentheses()
     | Genlex.Kwd "\\" -> parse_abs()
     | Genlex.Ident v  -> parse_var v
@@ -124,7 +124,7 @@ let lambda_of_string input =
     check_app lambda;
 
   and parse_abs() =
-    match (next()) with
+    match next() with
     | Genlex.Ident v ->
       check_fullstop();
       let lambda = parse_lambda() in
@@ -134,16 +134,16 @@ let lambda_of_string input =
   and parse_var v =
     check_app (Var v);
 
-  and parse_app lambda next_token = match next_token with
+  and parse_app lambda token = match token with
     | Genlex.Kwd ")"  -> lambda
     | Genlex.Kwd ";"  -> lambda
     | Genlex.Kwd "\\" -> App(lambda, parse_lambda())
-    | Genlex.Kwd "("  -> let () = next() and arg = parse_lambda() in (check_parenthesis(); check_app (App (lambda, arg)))
-    | Genlex.Ident v  -> let () = next() in check_app (App (lambda, Var v))
+    | Genlex.Kwd "("  -> let _ = next() and arg = parse_lambda() in (check_parenthesis(); check_app (App (lambda, arg)))
+    | Genlex.Ident v  -> let _ = next() in check_app (App (lambda, Var v))
     | _ -> failwith "Unexpected symbol"
 
   and check_app lambda =
-    match (peek()) with
+    match peek() with
     | None       -> failwith "Unexpected end of string"
     | Some token -> parse_app lambda token
   in parse_lambda();;
