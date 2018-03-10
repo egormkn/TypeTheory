@@ -1,5 +1,5 @@
-open Hw1_reduction;;
 open Hw1;;
+open Hw1_reduction;;
 
 type test_for_alpha_eq = {lmd1 : lambda; lmd2 : lambda; ans : bool};;
 type test_for_free_subst = {n : lambda; m : lambda; x : string; ans : bool};;
@@ -16,7 +16,9 @@ let tests_fae =
          lmd2 = lambda_of_string "\\y1.\\y2.\\y3.\\y4.y1 y2 y3 y4"; ans = true};
     {lmd1 = lambda_of_string "\\x1.\\x2.\\x3.\\x4.x4 x2 x3 x1";
      lmd2 = lambda_of_string "\\y1.\\y2.\\y3.\\y4.y1 y2 y3 y4"; ans = false};
-    {lmd1 = lambda_of_string "\\x1.\\x2.x1 x2";  lmd2 = lambda_of_string "\\y1.\\y2.y2 y1"; ans = false}];;
+	{lmd1 = lambda_of_string "\\x1.\\x2.x1 x2";  lmd2 = lambda_of_string "\\y1.\\y2.y2 y1"; ans = false};
+    {lmd1 = lambda_of_string "\\x.x";  lmd2 = lambda_of_string "\\a.x"; ans = false};
+    {lmd1 = lambda_of_string "\\b.\\a.a";  lmd2 = lambda_of_string "\\x.\\x.x"; ans = true}];;
 
 let tests_ofs = 
     [{n = lambda_of_string "x"; m = lambda_of_string "\\x.y"; x = "y"; ans = false};
@@ -44,6 +46,7 @@ let tests_rnf =
     [{lmd_r = lambda_of_string "(\\x.\\y.y)((\\z.z z)(\\z.z z))"; rdt = lambda_of_string "\\y.y"};
     {lmd_r = lambda_of_string "a ((\\y.\\z.y) (\\p.p))"; rdt = lambda_of_string "a \\z.\\p.p"};
     {lmd_r = lambda_of_string "(\\x.x) (\\y.y) (\\z.z))"; rdt = lambda_of_string "(\\z.z)"};
+    {lmd_r = lambda_of_string "(\\n.\\f.\\x.f (n f x)) (\\f.\\x.f x)"; rdt = lambda_of_string "\\f.\\x.f (f x)"};
     {lmd_r = lambda_of_string "(\\x.x x)(\\a.\\b.b b b)"; rdt = lambda_of_string "\\b.b b b"};
     {lmd_r = lambda_of_string "(\\x.x x x)((\\x.x)(\\x.x))"; rdt = lambda_of_string "\\x.x"};
     {lmd_r = lambda_of_string "(\\x.\\y.x)(\\x.x)((\\x.x x)(\\x.x x))"; rdt = lambda_of_string "\\x.x"};
@@ -99,5 +102,5 @@ let rec tester pred name l ind cor incor =
 tester (tester_on_alpha_eq) "is_alpha_equivalent" tests_fae 1 0 0;;
 tester (tester_on_free_subst) "free_subst" tests_ofs 1 0 0;;
 tester (tester_on_free_vars) "free_vars" tests_fv 1 0 0;;
-(* tester (tester_on_normal_beta_reduction) "normal_beta_reduction" tests_nbr 1 0 0;;
-tester (tester_on_reduce_to_normal_form) "reduce_to_normal_form" tests_rnf 1 0 0;; *)
+tester (tester_on_normal_beta_reduction) "normal_beta_reduction" tests_nbr 1 0 0;;
+tester (tester_on_reduce_to_normal_form) "reduce_to_normal_form" tests_rnf 1 0 0;;
