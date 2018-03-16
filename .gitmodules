@@ -1,6 +1,6 @@
 [submodule "ocaml-makefile"]
 	path = ocaml-makefile
-	url = https://github.com/mmottl/ocaml-makefile.git
+	url = https://github.com/egormkn/ocaml-makefile.git
 [submodule "conspect"]
 	path = conspect
 	url = https://github.com/artemohanjanyan/tt-conspect.git
