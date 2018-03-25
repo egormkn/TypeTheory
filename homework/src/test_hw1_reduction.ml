@@ -18,7 +18,7 @@ test "free_to_subst"
 
 test "free_vars"
   ~tester: free_vars
-  ~string_of: (fun x -> "*TODO*")
+  ~string_of: (String.concat "; ")
   (Stream.of_list [
       { input = lambda_of_string "x"; output = ["x"] };
       { input = lambda_of_string "\\x.x"; output = [] };

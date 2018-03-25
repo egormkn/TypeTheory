@@ -13,6 +13,13 @@ let (--) i j =
     if n < i then acc else aux (n-1) (n :: acc)
   in aux j [] ;;
 
+let rec string_of_list string_of_elem l =
+  match l with
+  | [] -> ""
+  | x::xs -> (string_of_elem x) ^ "; " ^ (string_of_list string_of_elem xs);;
+
+let string_of_list_of_int = string_of_list string_of_int;;
+
 test "int_of_peano"
   ~tester: int_of_peano
   ~string_of: string_of_int
@@ -47,9 +54,9 @@ test "inc"
     ]);;
 
 (* test "dec"
-  ~tester: (fun x -> int_of_peano (dec (peano_of_int x)))
-  ~string_of: string_of_int
-  (Stream.of_list [
+   ~tester: (fun x -> int_of_peano (dec (peano_of_int x)))
+   ~string_of: string_of_int
+   (Stream.of_list [
       { input = 0; output = 0 };
       { input = 1; output = 0 };
       { input = 2; output = 1 };
@@ -103,7 +110,7 @@ test "power"
 
 test "rev"
   ~tester: rev
-  ~string_of: (fun x -> "TODO")
+  ~string_of: string_of_list_of_int
   (Stream.of_list [
       { input = []; output = [] };
       { input = [1]; output = [1] };
@@ -114,7 +121,7 @@ test "rev"
 
 test "merge_sort"
   ~tester: merge_sort
-  ~string_of: (fun x -> "TODO")
+  ~string_of: string_of_list_of_int
   (Stream.of_list [
       { input = []; output = [] };
       { input = [1]; output = [1] };
