@@ -1,21 +1,21 @@
-type peano = Z | S of peano
+type peano = Z
+           | S of peano
 
 val peano_of_int: int -> peano
 val int_of_peano: peano -> int
 
 val inc: peano -> peano
-val dec: peano -> peano
 val add: peano -> peano -> peano
 val sub: peano -> peano -> peano
 val mul: peano -> peano -> peano
 val power: peano -> peano -> peano
 
 val rev: 'a list -> 'a list
-val merge: 'a list -> 'a list -> 'a list
-val split: int -> 'a list -> 'a list * 'a list
 val merge_sort: 'a list -> 'a list
 
-type lambda = Var of string | Abs of string * lambda | App of lambda * lambda
+type lambda = Var of string
+            | Abs of string * lambda
+            | App of lambda * lambda
 
 val string_of_lambda: lambda -> string
 

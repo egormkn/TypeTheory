@@ -1,5 +1,7 @@
-(* OCaml implementation of Peano arithmetics *)
-(* https://wiki.haskell.org/Peano_numbers    *)
+(*
+ * OCaml implementation of Peano arithmetics
+ * https://wiki.haskell.org/Peano_numbers
+ *)
 
 type peano =
   | Z
@@ -45,6 +47,7 @@ let rec mul x y =
 
 let rec power x y =
   match (x, y) with
+  | (Z, Z) -> failwith "0^0 is undefined"
   | (x, Z) -> S Z
   | (Z, y) -> Z
   | (x, S y) -> mul x (power x y);;
@@ -64,23 +67,22 @@ let rec merge x y =
     then x :: (merge xs (y::ys))
     else y :: (merge (x::xs) ys);;
 
-let rec split i x = match (i, x) with
-  | (0, x) -> ([], x)
-  | (i, []) -> (x, [])
-  | (i, head::tail) ->
-    let res = (split (i - 1) tail) in
-    match res with
-    | (l, r) -> (head::l, r);;
+let rec split x = match x with
+  | [] -> ([], [])
+  | [x] -> ([x], [])
+  | x::y::xs -> let (l, r) = split xs in (x::l, y::r);;
 
 let rec merge_sort x =
   match x with
   | [] -> []
   | [x] -> [x]
-  | x -> let (l, r) = split (List.length x / 2) x in
+  | x -> let (l, r) = split x in
     merge (merge_sort l) (merge_sort r);;
 
-(* Working with lambda expressions               *)
-(* https://en.wikipedia.org/wiki/Lambda_calculus *)
+(*
+ * Working with lambda expressions
+ * https://en.wikipedia.org/wiki/Lambda_calculus
+ *)
 
 type lambda =
   | Var of string
@@ -89,13 +91,14 @@ type lambda =
 
 (* Converting from lambda to string *)
 let rec string_of_lambda x =
+  let str = string_of_lambda in
   match x with
   | Var x -> x
-  | Abs (x, y) -> "\\" ^ x ^ "." ^ string_of_lambda y
-  | App (Abs (abs1, abs2), Var y) -> "(" ^ string_of_lambda (Abs (abs1, abs2)) ^ ") " ^ y
-  | App (Abs (abs1, abs2), y) -> "(" ^ string_of_lambda (Abs (abs1, abs2)) ^ ") (" ^ string_of_lambda y ^ ")"
-  | App (x, Var y) -> string_of_lambda x ^ " " ^ y
-  | App (x, y) -> string_of_lambda x ^ " (" ^ string_of_lambda y ^ ")";;
+  | Abs (x, y) -> "\\" ^ x ^ "." ^ str y
+  | App (Abs (_, _) as abs, Var y) -> "(" ^ str abs ^ ") " ^ y
+  | App (Abs (_, _) as abs, y) -> "(" ^ str abs ^ ") (" ^ str y ^ ")"
+  | App (x, Var y) -> str x ^ " " ^ y
+  | App (x, y) -> str x ^ " (" ^ str y ^ ")";;
 
 (*
  * Lambda parser grammar:
@@ -104,12 +107,13 @@ let rec string_of_lambda x =
  * <expr> -> { <var> | (<lambda>) }+{' '}
  *)
 let lambda_of_string input =
-  let input = input ^ ";" in
-  let tokens = Genlex.make_lexer ["\\"; "."; "("; ")"; ";"] (Stream.of_string input) in
+  let stream = Stream.of_string (input ^ ";") in
+  let tokens = Genlex.make_lexer ["\\"; "."; "("; ")"; ";"] stream in
   let next() = Stream.next tokens in
   let peek() = Stream.peek tokens in
-  let check_parenthesis() = if (next() <> Genlex.Kwd ")") then failwith "Parenthesis not closed" in
-  let check_fullstop() = if (next() <> Genlex.Kwd ".") then failwith "No full stop symbol found" in
+  let check c err = if (next() <> Genlex.Kwd c) then failwith err in
+  let check_parenthesis() = check ")" "Parenthesis not closed" in
+  let check_fullstop() = check "." "No full stop symbol found" in
 
   let rec parse_lambda() =
     match next() with
@@ -134,11 +138,14 @@ let lambda_of_string input =
   and parse_var v =
     check_app (Var v);
 
-  and parse_app lambda token = match token with
+  and parse_app lambda token =
+    match token with
     | Genlex.Kwd ")"  -> lambda
     | Genlex.Kwd ";"  -> lambda
     | Genlex.Kwd "\\" -> App(lambda, parse_lambda())
-    | Genlex.Kwd "("  -> let _ = next() and arg = parse_lambda() in (check_parenthesis(); check_app (App (lambda, arg)))
+    | Genlex.Kwd "("  -> let _ = next() and arg = parse_lambda() in
+      check_parenthesis();
+      check_app (App (lambda, arg));
     | Genlex.Ident v  -> let _ = next() in check_app (App (lambda, Var v))
     | _ -> failwith "Unexpected symbol"
 
