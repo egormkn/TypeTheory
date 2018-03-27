@@ -2,15 +2,13 @@
     Given two terms containing some variables, find, if it exists, the simplest
     substitution (i.e., an assignment of some term to every variable) which
     makes the two terms equal. The resulting substitution is called
-    the most general unifier .
-
-    @author Egor Makerenko
+    the most general unifier.
 *)
 
-(** Algebraic term is a variable or a function of some variables *)
+(** Algebraic term is a variable or a function of some other terms *)
 type algebraic_term =
-  | Var of string
-  | Fun of string * (algebraic_term list)
+  | Var of string                            (** Variable: x          *)
+  | Fun of string * (algebraic_term list)    (** Function: f(x, y, z) *)
 
 (* These types might also be used for convenience:
 
