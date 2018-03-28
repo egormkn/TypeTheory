@@ -10,7 +10,7 @@ type algebraic_term =
   | Fun of string * (algebraic_term list);;
 
 (** Unique function name generator *)
-let unique_name = Stream.from (fun i -> Some ("temp_" ^ string_of_int i));;
+let unique_name = Stream.from (fun i -> Some ("temp" ^ string_of_int i));;
 
 (** Returns one equation equivalent to given system of equations *)
 let system_to_equation system =

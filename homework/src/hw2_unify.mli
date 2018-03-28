@@ -9,11 +9,11 @@ type algebraic_term =
   | Var of string                            (** Variable: x          *)
   | Fun of string * (algebraic_term list)    (** Function: f(x, y, z) *)
 
-(* These types might also be used for convenience:
-
-   type substitution = string * algebraic_term
-   type equation = algebraic_term * algebraic_term
-   type system_of_equations = equation list *)
+(* These types might also be used for convenience: *)
+type substitution = string * algebraic_term
+type equation = algebraic_term * algebraic_term
+type unifier = substitution list
+type system = equation list
 
 (** Returns one equation equivalent to given system of equations *)
 val system_to_equation: (algebraic_term * algebraic_term) list -> (algebraic_term * algebraic_term)
