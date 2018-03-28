@@ -1,6 +1,8 @@
-#       `make` - build all sources
+#       `make` - build all homework sources
 #  `make test` - build and run tests
 # `make clean` - clean build directory
+#
+# Use `opam install ocamlbuild` to install build tool
 
 all: hw1 hw1_reduction hw2_unify hw2_inference
 
@@ -28,6 +30,6 @@ test_hw2_inference: test_hw2_inference.native
 	@mv $@ ./_build/bin/$*
 
 clean:
-	rm -rf _build/*
+	rm -rf _build
 
 .PHONY: all test clean test_hw1 test_hw1_reduction test_hw2_unify test_hw2_inference
