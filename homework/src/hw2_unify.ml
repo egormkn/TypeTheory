@@ -2,10 +2,7 @@
     Given two terms containing some variables, find, if it exists, the simplest
     substitution (i.e., an assignment of some term to every variable) which
     makes the two terms equal. The resulting substitution is called
-    the most general unifier .
-
-    @author Egor Makerenko
-*)
+    the most general unifier. *)
 
 (** Algebraic term is a variable or a function of some variables *)
 type algebraic_term =
@@ -65,7 +62,7 @@ let solve_system system =
       | (Fun (f, l1), Fun (g, l2)) when f = g && List.length l1 = List.length l2 ->
         let new_equations = List.combine l1 l2 in
         solve (tail @ new_equations) resolved
-      | (Fun _, Fun _) -> error "Third rule abused"
+      | (Fun _, Fun _) -> error "Equation with different functions"
   in
   let substitution_of_equation (left, right) =
     match left with

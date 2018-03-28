@@ -1,6 +1,8 @@
 open Hw2_unify;;
 open Test;;
 
+(* TODO: update tests*)
+
 let rec string_of_term x =
   match x with
   | Var v -> v
@@ -53,8 +55,14 @@ test "term_of_string"
 
 let sym1 = [
   (Fun ("x", [Var "p1"]), Fun ("x", [Var "p2"]));
-  (Fun ("y", [Var "p2"]), Fun ("y", [Var "p4"]));
+  (Fun ("y", [Var "p3"]), Fun ("y", [Var "p4"]));
   (Fun ("z", [Var "p5"]), Fun ("z", [Var "p6"]));
+];;
+
+let sol1 = [
+  ("p1", Var "p2");
+  ("p3", Var "p4");
+  ("p5", Var "p6");
 ];;
 
 let sym2 = [
@@ -76,61 +84,86 @@ let sym4 = [
   (Var("t3"), Fun("a", [Var "t4"; Var "t2"]));
 ];;
 
+let sym5 = [
+  (Fun ("x", [Var "p1"]), Fun ("x", [Var "p2"]));
+  (Fun ("y", [Var "p2"]), Fun ("y", [Var "p4"]));
+  (Fun ("z", [Var "p5"]), Fun ("z", [Var "p6"]));
+];;
+
+let sol5 = [
+  ("p1", Var "p4");
+  ("p2", Var "p4");
+  ("p5", Var "p6");
+];;
+
 let substitution = [
   ("p1", Var "s1");
   ("p2", Var "s2");
   ("p3", Var "s3");
 ];;
 
-(* let system_to_equation_compare (exp1, exp2) (res1, res2) =
+let system_to_equation_compare (exp1, exp2) (res1, res2) =
   match (exp1, exp2, res1, res2) with
-  | (Fun (exp_n1, exp_a1), Fun (exp_n1, exp_a1), res1, res2)
-  | _ -> expr2 *)
+  | (Fun (exp_n1, exp_a1), Fun (exp_n2, exp_a2), Fun (res_n1, res_a1), Fun (res_n2, res_a2)) ->
+    exp_n1 = exp_n2 && res_n1 = res_n2 && exp_a1 = res_a1 && exp_a2 = res_a2
+  | _ -> false;;
 
 test "system_to_equation"
   ~tester: system_to_equation
+  ~compare: system_to_equation_compare
   ~string_of: string_of_equation
   (Stream.of_list [
-      { input = sym1; output = (term_of_string "temp_0(x(p1), y(p2), z(p5))", term_of_string "temp_0(x(p2), y(p4), z(p6))") };
-      { input = sym2; output = (term_of_string "", term_of_string "") };
-      { input = sym3; output = (Var "x", Var "y") };
-      { input = sym4; output = (Var "x", Var "y") };
+      { input = sym1; output = (term_of_string "temp(x(p1), y(p3), z(p5))", term_of_string "temp(x(p2), y(p4), z(p6))") };
+      { input = sym2; output = (term_of_string "temp(x(p1), m(p1), z(p5))", term_of_string "temp(x(p2), y(p4), z(p6))") };
+      { input = sym3; output = (term_of_string "temp(x(p1), y(p1), z(p1))", term_of_string "temp(x(p2), y(p4), z(p6))") };
+      { input = sym4; output = (term_of_string "temp(a(tx, a(ty, a(tz, t2))), ty, tx, t3)", term_of_string "temp(a(a(ta, a(tb, ta)), t1), a(tz, t4), a(tz, t3), a(t4, t2))") };
     ]);;
 
+test "apply_substitution"
+  ~tester: (fun (x, y) -> apply_substitution x y)
+  ~string_of: string_of_term
+  (Stream.of_list [
+      { input = (substitution, term_of_string "temp(x(p1), y(p2), z(p5))"); output = term_of_string "temp(x(s1), y(s2), z(p5))" };
+      { input = (substitution, term_of_string "temp(x(p2), y(p4), z(p6))"); output = term_of_string "temp(x(s2), y(p4), z(p6))" };
+    ]);;
 
+test "check_solution"
+  ~tester: (fun (x, y) -> check_solution x y)
+  ~string_of: string_of_bool
+  (Stream.of_list [
+      { input = (sol1, sym1); output = true };
+      { input = (sol5, sym5); output = true };
+      { input = (substitution, sym1); output = false };
+    ]);;
 
-let rec print_substitution sub =
-  match sub with
-  | [] -> print_string "\n"
-  | (h::t) -> print_string ((fst h) ^ " = " ^ (string_of_term (snd h)) ^ "\n"); print_substitution t;;
+let string_of_solution solution =
+  match solution with
+  | Some s -> String.concat "; " (List.map (fun (v, t) -> v ^ " = " ^ (string_of_term t)) s)
+  | None -> "No solution";;
 
-let print_ans ans =
-  match ans with
-  | Some s -> print_substitution s
-  | None -> print_string "Not substitution!\n";;
-
-let maj_eqt = system_to_equation(sym1);;
-
-let eql = apply_substitution substitution (fst maj_eqt);;
-let eqr = apply_substitution substitution (snd maj_eqt);;
-
-print_string ((string_of_term eql) ^ "\n");;
-print_string ((string_of_term eqr) ^ "\n");;
-
-let check_subt = check_solution substitution sym1;;
-print_string ((string_of_bool check_subt) ^ "\n");;
-
-let ans_sym1 = solve_system sym1;;
-let ans_sym2 = solve_system sym2;;
-let ans_sym3 = solve_system sym3;;
-let ans_sym4 = solve_system sym4;;
-
-print_endline "System 1";;
-print_ans ans_sym1;;
-
-print_endline "System 2";;
-print_ans ans_sym2;;
-print_endline "System 3";;
-print_ans ans_sym3;;
-print_endline "System 4";;
-print_ans ans_sym4;;
+test "solve_system"
+  ~tester: solve_system
+  ~string_of: string_of_solution
+  (Stream.of_list [
+      { input = sym1; output = Some [
+            ("p1", Var "p2");
+            ("p3", Var "p4");
+            ("p5", Var "p6");
+          ] };
+      { input = sym2; output = None };
+      { input = sym3; output = Some [
+            ("p1", Var "p6");
+            ("p2", Var "p6");
+            ("p4", Var "p6");
+          ] };
+      { input = sym4; output = Some [
+            ("t1", term_of_string "a(a(ta, tb), a(ta, ta))");
+            ("ty", term_of_string "a(ta, tb)");
+            ("tx", term_of_string "a(ta, a(tb, ta))");
+            ("t3", term_of_string "a(tb, ta)");
+            ("tz", term_of_string "ta");
+            ("t4", term_of_string "tb");
+            ("t2", term_of_string "ta");
+          ] };
+      { input = sym5; output = Some sol5 };
+    ]);;
