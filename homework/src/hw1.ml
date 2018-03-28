@@ -1,50 +1,59 @@
-(*
- * OCaml implementation of Peano arithmetics
- * https://wiki.haskell.org/Peano_numbers
- *)
+(** Peano numbers are a simple way of representing the natural numbers
+    using only a zero value and a successor function.
+
+    In OCaml it is easy to create a type of Peano number values,
+    but since unary representation is inefficient, they are more
+    often used to do type arithmetic due to their simplicity.
+*)
 
 type peano =
   | Z
   | S of peano;;
 
-(* Basic peano <-> string conversion *)
+(** Converts int to peano number *)
 let rec peano_of_int i =
   match i with
   | 0 -> Z
   | i -> S (peano_of_int (i - 1));;
 
+(** Converts peano number to int *)
 let rec int_of_peano x =
   match x with
   | Z -> 0
   | S x -> 1 + int_of_peano x;;
 
-(* Peano arithmetic *)
+(** Increment peano number *)
 let inc x =
   S x;;
 
+(** Decrement peano number *)
 let dec x =
   match x with
   | Z -> Z
   | S x -> x;;
 
+(** Add one peano to another *)
 let rec add x y =
   match (x, y) with
   | (x, Z) -> x
   | (Z, y) -> y
   | (x, S y) -> S (add x y);;
 
+(** Subtract one peano from another *)
 let rec sub x y =
   match (x, y) with
   | (x, Z) -> x
   | (Z, y) -> Z
   | (S x, S y) -> sub x y;;
 
+(** Multiply two peano numbers *)
 let rec mul x y =
   match (x, y) with
   | (x, Z) -> Z
   | (Z, y) -> Z
   | (x, S y) -> add x (mul x y);;
 
+(** Raise peano number to the power *)
 let rec power x y =
   match (x, y) with
   | (Z, Z) -> failwith "0^0 is undefined"
@@ -52,44 +61,44 @@ let rec power x y =
   | (Z, y) -> Z
   | (x, S y) -> mul x (power x y);;
 
-(* Recursive implementation of list operations *)
+(** Reverse list *)
 let rev x =
   let rec rev_acc acc = function
     | [] -> acc
-    | head::tail -> rev_acc (head::acc) tail
+    | head :: tail -> rev_acc (head :: acc) tail
   in rev_acc [] x;;
 
+(** Merge two sorted lists *)
 let rec merge x y =
   match (x, y) with
   | ([], y) -> y
   | (x, []) -> x
-  | (x::xs, y::ys) -> if x < y
-    then x :: (merge xs (y::ys))
-    else y :: (merge (x::xs) ys);;
+  | (x :: xs, y :: ys) -> if x < y
+    then x :: (merge xs (y :: ys))
+    else y :: (merge (x :: xs) ys);;
 
+(** Split list to two lists of equal length *)
 let rec split x = match x with
   | [] -> ([], [])
   | [x] -> ([x], [])
-  | x::y::xs -> let (l, r) = split xs in (x::l, y::r);;
+  | x :: y :: xs -> let (l, r) = split xs in (x :: l, y :: r);;
 
+(** Sort list using mergesort algorithm *)
 let rec merge_sort x =
   match x with
   | [] -> []
   | [x] -> [x]
-  | x -> let (l, r) = split x in
-    merge (merge_sort l) (merge_sort r);;
+  | x -> let (l, r) = split x in merge (merge_sort l) (merge_sort r);;
 
-(*
- * Working with lambda expressions
- * https://en.wikipedia.org/wiki/Lambda_calculus
- *)
+
+
 
 type lambda =
   | Var of string
   | Abs of string * lambda
   | App of lambda * lambda;;
 
-(* Converting from lambda to string *)
+(** Converts lambda expression to string *)
 let rec string_of_lambda x =
   let str = string_of_lambda in
   match x with
@@ -100,12 +109,7 @@ let rec string_of_lambda x =
   | App (x, Var y) -> str x ^ " " ^ y
   | App (x, y) -> str x ^ " (" ^ str y ^ ")";;
 
-(*
- * Lambda parser grammar:
- * <lambda> -> <expr> ' ' <abs> | <expr> | <abs>
- * <abs> -> \<var>.<lambda>
- * <expr> -> { <var> | (<lambda>) }+{' '}
- *)
+(** Converts string to lambda expression *)
 let lambda_of_string input =
   let stream = Stream.of_string (input ^ ";") in
   let tokens = Genlex.make_lexer ["\\"; "."; "("; ")"; ";"] stream in
