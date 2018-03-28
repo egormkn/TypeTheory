@@ -1,19 +1,25 @@
+(** A beta reduction (also written β reduction) is the process of
+    calculating a result from the application of a function to an expression *)
+
 open Hw1;;
 
 module StringSet = Set.Make(String);;
 module StringMap = Map.Make(String);;
 
-(* Returns a set of free variables in `lambda` *)
+(** Generator of unique variable names *)
+let unique_name = Stream.from (fun i -> Some ("temp" ^ string_of_int i));;
+
+(** Returns a set of free variables in lambda expression *)
 let rec free_var_set lambda =
   match lambda with
   | Var v -> StringSet.singleton v
   | App (x, y) -> StringSet.union (free_var_set x) (free_var_set y);
   | Abs (x, y) -> StringSet.remove x (free_var_set y);;
 
-(* Returns a list of free variables in `lambda` *)
+(** Returns a list of free variables in lambda expression *)
 let free_vars lambda = StringSet.elements (free_var_set lambda);;
 
-(* Returns true if `key` is free in `lambda` *)
+(** Returns True if variable is free in lambda expression *)
 let rec has_free key lambda =
   match lambda with
   | Var v -> v = key
@@ -21,8 +27,8 @@ let rec has_free key lambda =
   | Abs (x, y) when x = key -> false
   | Abs (x, y) -> has_free key y;;
 
-(* Returns `dest`, where all free `key`s replaced by `src`   *)
-(* or throws an error, if `src` is not free for substitution *)
+(** Returns `dest`, where all free `key`s replaced by `src`
+    or throws an error, if `src` is not free for substitution *)
 let substitute src dest key =
   let src_free_vars = free_var_set src in
   let no_key_to_replace x = not (has_free key x) in
@@ -39,14 +45,14 @@ let substitute src dest key =
     | _ -> failwith (error())
   in substitute_rec dest;;
 
-(* Returns true if `src` is free for substitution *)
-(* in `dest` instead of `key`, false otherwise    *)
+(** Returns True, if first lambda is free for substitution
+    to the second instead of given variable *)
 let free_to_subst src dest key =
   try
     let _ = substitute src dest key in true
   with _ -> false;;
 
-(* Returns true if `lambda` expression is in normal form *)
+(** Returns True, lambda expression is in normal form *)
 let rec is_normal_form lambda =
   match lambda with
   | Var _ -> true
@@ -54,9 +60,8 @@ let rec is_normal_form lambda =
   | App (Abs (x, y), t) -> not (free_to_subst t y x)
   | App (x, y) -> is_normal_form x && is_normal_form y;;
 
-(* Returns true if `lambda1` is alpha-equivalent to `lambda2` *)
+(** Returns True, if lambda expressions are alpha-equivalent *)
 let is_alpha_equivalent lambda1 lambda2 =
-  let unique_name = Stream.from (fun i -> Some ("temp_" ^ string_of_int i)) in
   let rec is_alpha_eq lambda1 lambda2 =
     match (lambda1, lambda2) with
     | (Var v1, Var v2) -> v1 = v2
@@ -67,8 +72,8 @@ let is_alpha_equivalent lambda1 lambda2 =
     | _ -> false
   in is_alpha_eq lambda1 lambda2;;
 
-(* Returns true if `lambda1` is alpha-equivalent to `lambda2` *)
-(* Another variant without restrictions on variable names     *)
+(** Returns True, if lambda expressions are alpha-equivalent
+    Another variant without restrictions on variable names *)
 let is_alpha_equivalent lambda1 lambda2 =
   let mem = StringMap.mem in
   let find = StringMap.find in
@@ -87,27 +92,28 @@ let is_alpha_equivalent lambda1 lambda2 =
   in is_alpha_eq lambda1 lambda2 StringMap.empty StringMap.empty;;
 
 
-(* Lambda reference type and conversion functions *)
+
+
+(** Lambda reference type used for memoization *)
 type lambda_ref = Var_ref of string
                 | Abs_ref of (string * lambda_ref ref)
                 | App_ref of (lambda_ref ref * lambda_ref ref);;
 
+(** Converts lambda to lambda_ref reference *)
 let rec ref_of_lambda lambda =
   match lambda with
   | Var v -> ref (Var_ref v)
   | App (x, y) -> ref (App_ref (ref_of_lambda x, ref_of_lambda y))
   | Abs (x, y) -> ref (Abs_ref (x, ref_of_lambda y));;
 
+(** Converts lambda_ref reference to lambda *)
 let rec lambda_of_ref lambda_ref =
   match !lambda_ref with
   | Var_ref v -> Var v
   | App_ref (x, y) -> App (lambda_of_ref x, lambda_of_ref y)
   | Abs_ref (x, y) -> Abs (x, lambda_of_ref y);;
 
-(* Generator of unique variable names *)
-let unique_name = Stream.from (fun i -> Some ("temp_" ^ string_of_int i));;
-
-(* Do one step of normal beta-reduction for `lambda_ref` *)
+(** Does one step of beta-reduction for lambda_ref reference *)
 let rec reduction_step lambda_ref =
   let mem = StringMap.mem in
   let find = StringMap.find in
@@ -151,14 +157,13 @@ let rec reduction_step lambda_ref =
     | Some _ -> Some lambda_ref
     | None -> None;;
 
-(* Do one step of normal beta-reduction for `lambda` *)
+(** Does one step of beta-reduction using normal-order reduction *)
 let normal_beta_reduction lambda =
   match reduction_step (ref_of_lambda lambda) with
   | Some x -> lambda_of_ref x
   | None -> lambda;;
 
-(* Beta-reduce `lambda` to its normal form using normal reduction order *)
-(* Implementation should be effective and use memoization *)
+(** Effectively reduces lambda expression to its normal form *)
 let reduce_to_normal_form lambda =
   let rec reduction lambda_ref =
     match reduction_step lambda_ref with

@@ -1,22 +1,23 @@
+(** A beta reduction (also written β reduction) is the process of
+    calculating a result from the application of a function to an expression *)
+
 open Hw1
 
-(* Проверить свободу для подстановки. Параметры:
-   что подставляем, где подставляем, вместо чего подставляем *)
+(** Returns True, if first lambda is free for substitution
+    to the second instead of given variable *)
 val free_to_subst: lambda -> lambda -> string -> bool
 
-(* Вернуть список имён свободных переменных *)
+(** Returns a list of free variables in lambda expression *)
 val free_vars: lambda -> string list
 
-(* Проверить, находится ли лямбда-выражение в нормальной форме *)
+(** Returns True, lambda expression is in normal form *)
 val is_normal_form: lambda -> bool
 
-(* Проверить, альфа-эквивалентны ли лямбда-выражения *)
+(** Returns True, if lambda expressions are alpha-equivalent *)
 val is_alpha_equivalent: lambda -> lambda -> bool
 
-(* Выполнить один шаг бета-редукции, используя нормальный порядок *)
+(** Does one step of beta-reduction using normal-order reduction *)
 val normal_beta_reduction: lambda -> lambda
 
-(* Свести выражение к нормальной форме с использованием нормального
-   порядка редукции; реализация должна быть эффективной: использовать 
-   мемоизацию *)
+(** Effectively reduces lambda expression to its normal form *)
 val reduce_to_normal_form: lambda -> lambda
