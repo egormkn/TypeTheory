@@ -95,8 +95,8 @@ let rec merge_sort x =
 
 type lambda =
   | Var of string
-  | Abs of string * lambda
-  | App of lambda * lambda;;
+  | App of lambda * lambda
+  | Abs of string * lambda;;
 
 (** Converts lambda expression to string *)
 let rec string_of_lambda x =
