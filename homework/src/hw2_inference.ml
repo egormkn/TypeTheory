@@ -118,59 +118,84 @@ let rec free_types hm_type =
   | HM_Arrow (a, b) -> StringSet.union (free_types a) (free_types b)
   | HM_ForAll (a, b) -> StringSet.remove a (free_types b);;
 
-exception NoSolution of string;;
-
-(* TODO: implement algorithm W *)
-
-let rec do_subst subst hm_type set =
+(** Returns a Hindley-Milner type with applied substitution *)
+let rec apply_type_subst subst hm_type =
   match hm_type with
-  | HM_Elem(a) -> if StringSet.mem a set then hm_type else
-    if StringMap.mem a subst then StringMap.find a subst else hm_type
-  | HM_Arrow(a, b) -> HM_Arrow(do_subst subst a set, do_subst subst b set)
-  | HM_ForAll(a, b) -> HM_ForAll(a, do_subst subst b (StringSet.add a set));;
+  | HM_Elem a when StringMap.mem a subst -> StringMap.find a subst
+  | HM_Elem a -> hm_type
+  | HM_Arrow (a, b) ->
+    HM_Arrow (apply_type_subst subst a, apply_type_subst subst b)
+  | HM_ForAll (a, b) ->
+    HM_ForAll (a, apply_type_subst (StringMap.remove a subst) b);;
 
-let subst_to_subst subst1 subst2 =
-  StringMap.fold (fun a b map -> if StringMap.mem a map then map else StringMap.add a b map) subst1
-    (StringMap.fold (fun a b map -> StringMap.add a (do_subst subst1 b StringSet.empty) map)
-       subst2 StringMap.empty);;
+(** Returns a composition of two substitutions *)
+let compose_subst subst1 subst2 =
+  let subst2 = StringMap.map (apply_type_subst subst1) subst2 in
+  StringMap.union (fun key v1 v2 -> Some v2) subst1 subst2;;
 
-let do_subst_types subst types =
-  StringMap.fold (fun a b map -> StringMap.add a (do_subst subst b StringSet.empty) map) types StringMap.empty;;
+(** Returns a type environment with applied substitution *)
+let apply_subst_to_env subst type_env =
+  StringMap.map (apply_type_subst subst) type_env;;
 
-let add_union hm_type types =
-  let availble_types = StringMap.fold (fun a b set -> StringSet.union (free_types b) set) types StringSet.empty in
-  StringSet.fold (fun a b -> HM_ForAll(a, b)) (StringSet.fold (fun a b -> if StringSet.mem a availble_types then b else StringSet.add a b) (free_types hm_type) StringSet.empty) hm_type;;
+(** Abstracts a type over all type variables which are free
+    in the type but not free in the given type environment *)
+let generalize type_env hm_type =
+  let add_free_types key value = StringSet.union (free_types value) in
+  let free_env_types = StringMap.fold add_free_types type_env StringSet.empty in
+  let free_hm_types = free_types hm_type in
+  let new_forall_vars = StringSet.diff free_hm_types free_env_types in
+  let add_quantifier var hm_type = HM_ForAll (var, hm_type) in
+  StringSet.fold add_quantifier new_forall_vars hm_type;;
 
-let rec rm_union hm_type =
+(** Replaces all bound type variables in a type with fresh type variables *)
+let rec instantiate hm_type =
   match hm_type with
-  | HM_ForAll(a, b) -> do_subst (StringMap.add a (HM_Elem(Stream.next unique_var)) StringMap.empty) (rm_union b) StringSet.empty
+  | HM_ForAll (a, b) ->
+    let subst = StringMap.singleton a (HM_Elem (Stream.next unique_var)) in
+    apply_type_subst subst (instantiate b)
   | _ -> hm_type;;
 
+exception NoSolution of string;;
+
+(** Returns a list of variable types and a type of Hindley-Milner lambda *)
 let algorithm_w hm_lambda =
-  let rec impl hm_lambda types =
+  let error message = raise (NoSolution message) in
+  let rec algorithm_w_rec type_env hm_lambda =
     match hm_lambda with
-    | HM_Var(a) -> if StringMap.mem a types then (rm_union (StringMap.find a types), StringMap.empty) else raise (NoSolution "Free variable encountered")
-    | HM_App(a, b) ->
-      (let (hmt1, t1) = impl a types in
-       let (hmt2, t2) = impl b (do_subst_types t1 types) in
+    | HM_Var a when StringMap.mem a type_env ->
+      (StringMap.empty, instantiate (StringMap.find a type_env))
+    | HM_Var a -> error "Free variable found"
+    | HM_App (a, b) ->
+      (let (s1, t1) = algorithm_w_rec type_env a in
+       let (s2, t2) = algorithm_w_rec (apply_subst_to_env s1 type_env) b in
        let new_type = HM_Elem (Stream.next unique_var) in
-       match solve_system ([((term_of_hm_type (do_subst t2 hmt1 StringSet.empty)), (term_of_hm_type (HM_Arrow(hmt2, new_type))))]) with
-       | None -> raise (NoSolution "Couldn't solve the system")
-       | Some ans -> let ans_types = subst_to_subst
-                         (List.fold_left (fun map (str, term) -> StringMap.add str (hm_type_of_term term) map) StringMap.empty ans) (subst_to_subst t2 t1) in
-         (do_subst ans_types new_type StringSet.empty, ans_types))
-    | HM_Abs(a, b) -> let new_type = HM_Elem (Stream.next unique_var) in
-      let (hmt1, t1) = impl b (StringMap.add a new_type (StringMap.remove a types)) in
-      (HM_Arrow(do_subst t1 new_type StringSet.empty, hmt1), t1)
-    | HM_Let(a, b, c) -> let (hmt1, t1) = impl b types in
-      let new_types = do_subst_types t1 types in
-      let (hmt2, t2) = impl c (StringMap.add a (add_union hmt1 new_types) (StringMap.remove a new_types)) in
-      (hmt2, subst_to_subst t2 t1) in
-  let types = StringSet.fold
-      (fun a map -> StringMap.add a (HM_Elem (Stream.next unique_var)) map)
-      (free_vars hm_lambda) StringMap.empty
+       let left = apply_type_subst s2 t1 in
+       let right = HM_Arrow (t2, new_type) in
+       let equation = (term_of_hm_type left, term_of_hm_type right) in
+       match solve_system [equation] with
+       | None -> error "Couldn't solve the system"
+       | Some answer ->
+         let add_subst (str, term) = StringMap.add str (hm_type_of_term term) in
+         let v = List.fold_right add_subst answer StringMap.empty in
+         let unifier = compose_subst v (compose_subst s2 s1) in
+         (unifier, apply_type_subst unifier new_type))
+    | HM_Abs (a, b) ->
+      let new_type = HM_Elem (Stream.next unique_var) in
+      let type_env = StringMap.add a new_type (StringMap.remove a type_env) in
+      let (s1, t1) = algorithm_w_rec type_env b in
+      (s1, HM_Arrow (apply_type_subst s1 new_type, t1))
+    | HM_Let (a, b, c) ->
+      let (s1, t1) = algorithm_w_rec type_env b in
+      let a_type = generalize (apply_subst_to_env s1 type_env) t1 in
+      let type_env = apply_subst_to_env s1 (StringMap.remove a type_env) in
+      let type_env = StringMap.add a a_type type_env in
+      let (s2, t2) = algorithm_w_rec type_env c in
+      (compose_subst s2 s1, t2)
   in
+  let free = free_vars hm_lambda in
+  let bound_to_unique v = StringMap.add v (HM_Elem (Stream.next unique_var)) in
+  let type_environment = StringSet.fold bound_to_unique free StringMap.empty in
   try
-    let (tp, map) = impl hm_lambda types in
-    Some (StringMap.bindings map, tp)
+    let (unifier, hm_type) = algorithm_w_rec type_environment hm_lambda in
+    Some (StringMap.bindings unifier, hm_type)
   with (NoSolution e) -> None;;
