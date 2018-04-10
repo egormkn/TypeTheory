@@ -39,16 +39,17 @@ let unique_var = Stream.from (fun i -> Some ("var" ^ string_of_int i));;
 
 (** Converts simple type to algebraic term using `->` as a function *)
 let rec term_of_simp_type t =
+  let to_term = term_of_simp_type in
   match t with
-  | S_Elem v -> Hw2_unify.Var v
-  | S_Arrow (a, b) -> Hw2_unify.Fun("->", [(term_of_simp_type a);(term_of_simp_type b)]);;
+  | S_Elem v -> Var v
+  | S_Arrow (a, b) -> Fun("->", [ (to_term a); (to_term b) ]);;
 
 (** Converts algebraic term with `->` functions to simple type *)
 let rec simp_type_of_term t =
+  let to_type = simp_type_of_term in
   match t with
-  | Hw2_unify.Var v -> S_Elem v
-  | Hw2_unify.Fun(name, [ l; r ]) when name = "->" ->
-    S_Arrow (simp_type_of_term l, simp_type_of_term r)
+  | Var v -> S_Elem v
+  | Fun(f, [ l; r ]) when f = "->" -> S_Arrow (to_type l, to_type r)
   | _ -> failwith "Term is not representing a simple type";;
 
 (** Converts pair of types to algebraic equation *)
@@ -59,43 +60,45 @@ let infer_simp_type lambda =
   let new_type() = S_Elem (Stream.next unique_type) in
   let add_type_to_map map t = StringMap.add t (new_type()) map in
   let rec get_system lambda types =
-    match lambda with
-    | Hw1.Var v -> ([], StringMap.find v types)
-    | Hw1.App (lambda1, lambda2) ->
+    match (lambda : lambda) with
+    | Var v -> ([], StringMap.find v types)
+    | App (lambda1, lambda2) ->
       let (system1, t1) = get_system lambda1 types in
       let (system2, t2) = get_system lambda2 types in
       let new_t = new_type() in
       (system1 @ system2 @ [(t1, S_Arrow(t2, new_t))], new_t)
-    | Hw1.Abs (v, l) ->
+    | Abs (v, l) ->
       let new_map = add_type_to_map types v in
       let (system1, t1) = get_system l new_map in
       (system1, S_Arrow(StringMap.find v new_map, t1))
   in
-  let free = Hw1_reduction.free_vars lambda in
+  let free = free_vars lambda in
   let types = List.fold_left add_type_to_map StringMap.empty free in
   let (system, t) = get_system lambda types in
-  match Hw2_unify.solve_system (List.map equation_of_types system) with
+  match solve_system (List.map equation_of_types system) with
   | None -> None
   | Some solution ->
+    let lambda_type_term = apply_substitution solution (term_of_simp_type t) in
     let to_type_list = List.map (fun (a, b) -> (a, simp_type_of_term b)) in
-    let lambda_type_term = Hw2_unify.apply_substitution solution (term_of_simp_type t) in
-    let lambda_type = simp_type_of_term lambda_type_term in
-    Some (to_type_list solution, lambda_type);;
+    Some (to_type_list solution, simp_type_of_term lambda_type_term);;
+
+
 
 
 (** Converts Hindley-Milner type to algebraic term using `->` as a function *)
 let rec term_of_hm_type hm_type =
+  let to_term = term_of_hm_type in
   match hm_type with
-  | HM_Elem a  -> Hw2_unify.Var a
-  | HM_Arrow (a, b) -> Hw2_unify.Fun ("->", [(term_of_hm_type a); (term_of_hm_type b)])
+  | HM_Elem a  -> Var a
+  | HM_Arrow (a, b) -> Fun ("->", [ (to_term a); (to_term b) ])
   | _ -> failwith "Forall quantifier cannot be represented as a term";;
 
 (** Converts algebraic term with `->` functions to Hindley-Milner type *)
 let rec hm_type_of_term term =
+  let to_type = hm_type_of_term in
   match term with
-  | Hw2_unify.Var a  -> HM_Elem a
-  | Hw2_unify.Fun (name, [l;r]) when name = "->" ->
-    HM_Arrow(hm_type_of_term l, hm_type_of_term r)
+  | Var a  -> HM_Elem a
+  | Fun (f, [l;r]) when f = "->" -> HM_Arrow(to_type l, to_type r)
   | _ -> failwith "Term is not representing a simple type";;
 
 (** Returns a set of free variables in Hindley-Milner lambda *)
@@ -104,7 +107,7 @@ let rec free_vars hm_lambda =
   | HM_Var a -> StringSet.singleton a
   | HM_App (a, b) -> StringSet.union (free_vars a) (free_vars b)
   | HM_Abs (a, b) -> StringSet.remove a (free_vars b)
-  | HM_Let (a, b, c) -> (* TODO: check the `let` case *)
+  | HM_Let (a, b, c) ->
     let free_vars_c = StringSet.remove a (free_vars c) in
     StringSet.union (free_vars b) free_vars_c;;
 
@@ -115,8 +118,9 @@ let rec free_types hm_type =
   | HM_Arrow (a, b) -> StringSet.union (free_types a) (free_types b)
   | HM_ForAll (a, b) -> StringSet.remove a (free_types b);;
 
+exception NoSolution of string;;
 
-
+(* TODO: implement algorithm W *)
 
 let rec do_subst subst hm_type set =
   match hm_type with
@@ -142,10 +146,7 @@ let rec rm_union hm_type =
   | HM_ForAll(a, b) -> do_subst (StringMap.add a (HM_Elem(Stream.next unique_var)) StringMap.empty) (rm_union b) StringSet.empty
   | _ -> hm_type;;
 
-
-exception NoSolution of string;;
-
-let algorithm_w hm_lmd =
+let algorithm_w hm_lambda =
   let rec impl hm_lambda types =
     match hm_lambda with
     | HM_Var(a) -> if StringMap.mem a types then (rm_union (StringMap.find a types), StringMap.empty) else raise (NoSolution "Free variable encountered")
@@ -165,7 +166,11 @@ let algorithm_w hm_lmd =
       let new_types = do_subst_types t1 types in
       let (hmt2, t2) = impl c (StringMap.add a (add_union hmt1 new_types) (StringMap.remove a new_types)) in
       (hmt2, subst_to_subst t2 t1) in
-  let types = StringSet.fold (fun a map -> StringMap.add a (HM_Elem (Stream.next unique_var)) map) (free_vars hm_lmd) (StringMap.empty) in
+  let types = StringSet.fold
+      (fun a map -> StringMap.add a (HM_Elem (Stream.next unique_var)) map)
+      (free_vars hm_lambda) StringMap.empty
+  in
   try
-    let (tp, map) = impl hm_lmd types in Some (StringMap.bindings map, tp)
+    let (tp, map) = impl hm_lambda types in
+    Some (StringMap.bindings map, tp)
   with (NoSolution e) -> None;;
