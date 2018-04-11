@@ -96,6 +96,12 @@ let sol5 = [
   ("p5", Var "p6");
 ];;
 
+let sym6 = [
+  (Fun ("x", [Var "p1"]), Fun ("x", [Var "p1"]));
+];;
+
+let sol6 = [];;
+
 let substitution = [
   ("p1", Var "s1");
   ("p2", Var "s2");
@@ -166,4 +172,5 @@ test "solve_system"
             ("t2", term_of_string "ta");
           ] };
       { input = sym5; output = Some sol5 };
+      { input = sym6; output = Some sol6 };
     ]);;
