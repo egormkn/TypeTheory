@@ -131,7 +131,13 @@ let rec apply_type_subst subst hm_type =
 (** Returns a composition of two substitutions *)
 let compose_subst subst1 subst2 =
   let subst2 = StringMap.map (apply_type_subst subst1) subst2 in
-  StringMap.union (fun key v1 v2 -> Some v2) subst1 subst2;;
+  StringMap.merge (fun key v1 v2 ->
+      match (v1, v2) with
+      | (None, None) -> None
+      | (Some v, None) -> Some v
+      | (None, Some v) -> Some v
+      | (Some v1, Some v2) -> Some v2) subst1 subst2;;
+(* StringMap.union (fun key v1 v2 -> Some v2) subst1 subst2;; *)
 
 (** Returns a type environment with applied substitution *)
 let apply_subst_to_env subst type_env =

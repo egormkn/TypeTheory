@@ -47,7 +47,7 @@ let solve_system system =
   in
   let rec solve system resolved =
     match system with
-    | [] -> error "System is empty"
+    | [] -> []
     | _ when StringSet.cardinal resolved = List.length system -> system
     | equation :: tail ->
       match equation with
